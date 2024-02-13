@@ -4,7 +4,7 @@
 .SUFFIXES:
 
 CC=gcc
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g 
 VPATH=src/
 
 # Note: -lnsl does not seem to work on Mac OS but will
@@ -12,8 +12,8 @@ VPATH=src/
 #LIBS += -lsocket -lnsl -lrt
 LIBS+=-lpthread
 
-INCLUDE = readcmd.h csapp.h
-OBJS = readcmd.o csapp.o
+INCLUDE = readcmd.h csapp.h execute.h
+OBJS = readcmd.o csapp.o execute.o
 INCLDIR = -I.
 
 all: shell
