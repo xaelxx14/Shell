@@ -7,7 +7,7 @@ void handler_sigchld(int sig)
     pid_t pid;
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
     {
-        nbFils --;
+        nbFils--;
     }
     return;
 }
@@ -26,15 +26,21 @@ int execInterne(struct cmdline *cmd)
     return 1;
 }
 
+
 int execAvecPipe(struct cmdline *cmd)
 {
+    if (DEBUG)
+    {
+        fprintf(stderr, "execAvecPipe\n");
+    }
     signal(SIGCHLD, handler_sigchld);
     int nbPipes = 0;
-    while (cmd->seq[nbPipes] != NULL) // compte le nombre de pipes
+    while (cmd->seq[nbPipes+1] != NULL) // compte le nombre de pipes
     {
         nbPipes++;
     }
     int pipes[nbPipes - 1][2];
+
     for (int i = 0; i < nbPipes - 1; i++) // création des pipes
     {
         if (pipe(pipes[i]) == -1)
@@ -43,67 +49,82 @@ int execAvecPipe(struct cmdline *cmd)
             exit(1);
         }
     }
-    for (int i = 0; i < nbPipes; i++)
+
+    for (int i = 0; i <= nbPipes; i++)
     {
-        if (Fork() == 0)        // fils
+        if (DEBUG)
         {
-            for (int j = 0; j < nbPipes - 1; j++) // fermeture des pipes inutiles
+            fprintf(stderr, "execvp(%s)\n", cmd->seq[i][0]);
+            fprintf(stderr, "i = %d\n", i);
+        }
+        if (Fork() == 0) // Fils
+        {
+            //On redirige les entrées/sorties
+            if (i == 0) //Cas de la première commande
             {
-                //Ne ferme pas : le port pipes[i][0] et le port pipe[i+1][1]
-                if(j==i){
-                    close(pipes[j][1]);
-                }
-                else if(j==i+1){
-                    close(pipes[j][0]);
-                }
-                else{
-                    close(pipes[j][0]);
-                    close(pipes[j][1]);
-                }
-                
-            }
-            if (i==0){
                 if (cmd->in)
                 {
                     int new_in = open(cmd->in, O_RDONLY);
-                    test_fich(new_in,cmd->in);
+                    test_fich(new_in, cmd->in);
                     dup2(new_in, 0); // redirige de new_in vers stdin
                 }
-                dup2(pipes[i][1],1); // redirige stdout vers le pipe
+                if (DEBUG)
+                {
+                    fprintf(stderr, "Redirection de stdout pour i = 0\n");
+                }
+                dup2(pipes[i][1], 1); // redirige stdout vers le pipe
             }
-            else if (i == nbPipes -1)
+            else if (i == nbPipes) //Cas de la dernière commande
             {
                 if (cmd->out)
                 {
                     int new_out = open(cmd->out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                    test_fich(new_out,cmd->out);
+                    test_fich(new_out, cmd->out);
                     dup2(new_out, 1); // redirige de new_out vers stdout
+                }
+                if (DEBUG)
+                {
+                    fprintf(stderr, "Redirection de stdout pour i = %d\n", nbPipes);
                 }
                 dup2(pipes[i - 1][0], 0); // redirige stdin vers le pipe
             }
-            else
+            else    //Cas général
             {
+                if (DEBUG)
+                {
+                    fprintf(stderr, "Redirection de stdin et stdout pour i = %d\n", i);
+                }
                 dup2(pipes[i - 1][0], 0); // redirige stdin vers le pipe précédent
-                //dup2(pipes[i][1], 1); // redirige stdout vers le pipe
+                dup2(pipes[i][1], 1);     // redirige stdout vers le pipe
             }
+
+            // for (int i = 0; i < nbPipes; i++) // fermeture des pipes pour les fils
+            // {
+            //     close(pipes[i][0]);
+            //     close(pipes[i][1]);
+            // }
+
             execvp(cmd->seq[i][0], cmd->seq[i]);
             fprintf(stderr, RED "Erreur:" RESET " command not found\n");
             exit(1);
         }
-        else
+        else    //Père
         {
             nbFils++;
         }
     }
-    for (int i = 0; i < nbPipes - 1; i++) // fermeture des pipes pour le Père
+    for (int i = 0; i < nbPipes; i++) // fermeture des pipes pour le Père
     {
         close(pipes[i][0]);
         close(pipes[i][1]);
     }
-    while (nbFils > 0);  // attente de la fin des fils
+
+    while (nbFils > 0)
+        ; // attente de la fin des fils
     signal(SIGCHLD, SIG_DFL);
     return 0;
 }
+
 
 int execSansPipe(struct cmdline *cmd)
 {
@@ -115,13 +136,13 @@ int execSansPipe(struct cmdline *cmd)
         if (cmd->in)
         {
             new_in = open(cmd->in, O_RDONLY);
-            test_fich(new_in,cmd->in);
+            test_fich(new_in, cmd->in);
             dup2(new_in, 0); // redirige de new_in vers stdin
         }
         if (cmd->out)
         {
             new_out = open(cmd->out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-            test_fich(new_out,cmd->out);
+            test_fich(new_out, cmd->out);
             dup2(new_out, 1); // redirige de new_out vers stdout
         }
         execvp(cmd->seq[0][0], cmd->seq[0]);
@@ -138,23 +159,22 @@ int execSansPipe(struct cmdline *cmd)
 
 int interpreteur(struct cmdline *cmd)
 {
-    if(DEBUG) printf("interpreteur\n");
+    if (DEBUG) fprintf(stderr,"interpreteur\n");
     if (cmd == NULL || cmd->seq[0] == NULL)
     {
-        //printf(RED "Commande vide\n" RESET);
+        // printf(RED "Commande vide\n" RESET);
         return 1;
     }
     else if (cmd->err)
     {
-        printf(RED "Erreur de syntaxe\n" RESET);
+        fprintf(stderr,RED "Erreur de syntaxe\n" RESET);
         return 1;
     }
-    if(DEBUG) printf("cmd->seq[0][0] = %s\n", (char *)cmd->seq[0][0]);
+    if (DEBUG) fprintf(stderr,"cmd->seq[0][0] = %s\n", (char *)cmd->seq[0][0]);
 
     if (estInterne(cmd->seq[0][0]))
     {
-        if (DEBUG)
-            printf("estInterne\n");
+        if (DEBUG) fprintf(stderr,"estInterne\n");
         execInterne(cmd);
     }
     if (cmd->seq[1] == NULL)

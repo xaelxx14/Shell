@@ -7,7 +7,6 @@
 #define DEBUG 0
 
 #define BOLD "\x1b[1m"
-#define RESETBOLD "\x1b[21m"
 #define BLUE "\x1b[34m"
 #define RED "\x1b[31m"
 #define GREEN "\x1b[32m"
