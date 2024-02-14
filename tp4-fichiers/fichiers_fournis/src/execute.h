@@ -2,6 +2,9 @@
 #define __EXECUTE_H
 #include "csapp.h"
 #include "readcmd.h"
+#include "tests.h"
+
+#define DEBUG 0
 
 #define BOLD "\x1b[1m"
 #define RESETBOLD "\x1b[21m"
@@ -18,5 +21,5 @@
     Cette fonction permet d'interpréter une commande
     Renvoie 0 si tout s'est bien passé 
 */
-int interpreteur(struct cmdline *cmd, int in, int out);
-#endif
+int interpreteur(struct cmdline *cmd);
+#endif // __EXECUTE_H

@@ -11,13 +11,10 @@
 
 int main()
 {
-	int in = dup(0);
-	int out = dup(1);
 	while (1) {
 		struct cmdline *l;
-
 		printf(BLUE "shell> " RESET);
 		l = readcmd();
-		interpreteur(l, in, out);
+		interpreteur(l);
 	}
 }
