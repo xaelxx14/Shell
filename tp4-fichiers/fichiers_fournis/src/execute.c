@@ -1,11 +1,11 @@
 #include "execute.h"
 
 int nbFils = 0; // nombre de fils en cours d'exécution (pour le handler)
+int nbFilsEsp = 0; // nombre de fils en cours d'exécution en BG(pour le handler)
 
 void handler_sigchld(int sig)
 {
-    pid_t pid;
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
+    while ((waitpid(-1, NULL, WNOHANG)) > 0)
     {
         nbFils--;
     }
@@ -15,7 +15,14 @@ void handler_sigchld(int sig)
 void handler_sigchldbg(int sig)
 {
     pid_t pid;
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0);
+    while ((pid = waitpid(-1, NULL, WNOHANG| WUNTRACED)) > 0)
+    {
+        nbFilsEsp--;
+    };
+    if (nbFilsEsp == 0)
+    {
+        signal(SIGCHLD, SIG_DFL);
+    }
     return;
 
 }
@@ -40,7 +47,7 @@ int execAvecPipe(struct cmdline *cmd)
     {
         fprintf(stderr, "execAvecPipe\n");
     }
-    signal(SIGCHLD, handler_sigchld);
+    Signal(SIGCHLD, handler_sigchld);
     int nb_cmd = 0;
     while (cmd->seq[nb_cmd + 1] != NULL) // compte le nombre de pipes
     {
@@ -168,7 +175,7 @@ int execSansPipe(struct cmdline *cmd)
 
 int interpreteur(struct cmdline *cmd)
 {
-    if (DEBUG)
+        if (DEBUG)
         fprintf(stderr, "interpreteur\n");
     if (cmd == NULL || cmd->seq[0] == NULL)
     {
@@ -179,6 +186,24 @@ int interpreteur(struct cmdline *cmd)
     {
         fprintf(stderr, RED "Erreur de syntaxe\n" RESET);
         return 1;
+    }
+    if (cmd->esp)
+    {
+        cmd->esp = NULL;
+        pid_t pid;
+        Signal(SIGCHLD, handler_sigchldbg);
+
+        if ((pid = Fork()) == 0)
+        {
+            interpreteur(cmd);
+            exit(0);
+        }
+        else
+        {
+            nbFilsEsp++;
+            return 0;
+        }
+        return 0;
     }
     if (DEBUG)
         fprintf(stderr, "cmd->seq[0][0] = %s\n", (char *)cmd->seq[0][0]);

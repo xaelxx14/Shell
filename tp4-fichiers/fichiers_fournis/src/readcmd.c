@@ -232,6 +232,13 @@ struct cmdline *readcmd(void)
 			cmd[0] = 0;
 			cmd_len = 0;
 			break;
+		case '&':
+			if (words[i] != 0) {
+				s->err = "garbage after background symbol";
+				goto error;
+			}
+			s->esp = w;
+			break;
 		default:
 			cmd = xrealloc(cmd, (cmd_len + 2) * sizeof(char *));
 			cmd[cmd_len++] = w;
