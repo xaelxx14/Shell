@@ -12,6 +12,14 @@ void handler_sigchld(int sig)
     return;
 }
 
+void handler_sigchldbg(int sig)
+{
+    pid_t pid;
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0);
+    return;
+
+}
+
 int execInterne(struct cmdline *cmd)
 {
     if (strcmp("cd", (char *)cmd->seq[0][0]) == 0)
@@ -26,7 +34,6 @@ int execInterne(struct cmdline *cmd)
     return 1;
 }
 
-
 int execAvecPipe(struct cmdline *cmd)
 {
     if (DEBUG)
@@ -34,14 +41,14 @@ int execAvecPipe(struct cmdline *cmd)
         fprintf(stderr, "execAvecPipe\n");
     }
     signal(SIGCHLD, handler_sigchld);
-    int nbPipes = 0;
-    while (cmd->seq[nbPipes+1] != NULL) // compte le nombre de pipes
+    int nb_cmd = 0;
+    while (cmd->seq[nb_cmd + 1] != NULL) // compte le nombre de pipes
     {
-        nbPipes++;
+        nb_cmd++;
     }
-    int pipes[nbPipes - 1][2];
+    int pipes[nb_cmd][2];
 
-    for (int i = 0; i < nbPipes - 1; i++) // création des pipes
+    for (int i = 0; i < nb_cmd; i++) // création des pipes
     {
         if (pipe(pipes[i]) == -1)
         {
@@ -50,7 +57,7 @@ int execAvecPipe(struct cmdline *cmd)
         }
     }
 
-    for (int i = 0; i <= nbPipes; i++)
+    for (int i = 0; i <= nb_cmd; i++)
     {
         if (DEBUG)
         {
@@ -59,22 +66,23 @@ int execAvecPipe(struct cmdline *cmd)
         }
         if (Fork() == 0) // Fils
         {
-            //On redirige les entrées/sorties
-            if (i == 0) //Cas de la première commande
+            // On redirige les entrées/sorties
+            if (i == 0) // Cas de la première commande
             {
                 if (cmd->in)
                 {
                     int new_in = open(cmd->in, O_RDONLY);
                     test_fich(new_in, cmd->in);
-                    dup2(new_in, 0); // redirige de new_in vers stdin
+                    dup2(new_in, STDIN_FILENO); // redirige de new_in vers stdin
                 }
                 if (DEBUG)
                 {
-                    fprintf(stderr, "Redirection de stdout pour i = 0\n");
+                    fprintf(stderr, "Redirection de stdout pour %s\n", cmd->seq[i][0]);
                 }
-                dup2(pipes[i][1], 1); // redirige stdout vers le pipe
+
+                dup2(pipes[0][1], STDOUT_FILENO); // redirige stdout vers le pipe
             }
-            else if (i == nbPipes) //Cas de la dernière commande
+            else if (i == nb_cmd) // Cas de la dernière commande
             {
                 if (cmd->out)
                 {
@@ -84,36 +92,37 @@ int execAvecPipe(struct cmdline *cmd)
                 }
                 if (DEBUG)
                 {
-                    fprintf(stderr, "Redirection de stdout pour i = %d\n", nbPipes);
+                    fprintf(stderr, "Redirection de stdin pour %s\n", cmd->seq[i][0]);
                 }
-                dup2(pipes[i - 1][0], 0); // redirige stdin vers le pipe
+
+                dup2(pipes[i - 1][0], STDIN_FILENO); // redirige stdin vers le pipe
             }
-            else    //Cas général
+            else // Cas général
             {
                 if (DEBUG)
                 {
                     fprintf(stderr, "Redirection de stdin et stdout pour i = %d\n", i);
                 }
-                dup2(pipes[i - 1][0], 0); // redirige stdin vers le pipe précédent
-                dup2(pipes[i][1], 1);     // redirige stdout vers le pipe
-            }
 
-            // for (int i = 0; i < nbPipes; i++) // fermeture des pipes pour les fils
-            // {
-            //     close(pipes[i][0]);
-            //     close(pipes[i][1]);
-            // }
+                dup2(pipes[i - 1][0], STDIN_FILENO); // redirige stdin vers le pipe précédent
+                dup2(pipes[i][1], STDOUT_FILENO);    // redirige stdout vers le pipe
+            }
+            for (int k = 0; k < nb_cmd; k++)
+            {
+                close(pipes[k][0]);
+                close(pipes[k][1]);
+            }
 
             execvp(cmd->seq[i][0], cmd->seq[i]);
             fprintf(stderr, RED "Erreur:" RESET " command not found\n");
             exit(1);
         }
-        else    //Père
+        else // Père
         {
             nbFils++;
         }
     }
-    for (int i = 0; i < nbPipes; i++) // fermeture des pipes pour le Père
+    for (int i = 0; i < nb_cmd; i++) // fermeture des pipes pour le Père
     {
         close(pipes[i][0]);
         close(pipes[i][1]);
@@ -124,7 +133,6 @@ int execAvecPipe(struct cmdline *cmd)
     signal(SIGCHLD, SIG_DFL);
     return 0;
 }
-
 
 int execSansPipe(struct cmdline *cmd)
 {
@@ -157,9 +165,11 @@ int execSansPipe(struct cmdline *cmd)
     }
 }
 
+
 int interpreteur(struct cmdline *cmd)
 {
-    if (DEBUG) fprintf(stderr,"interpreteur\n");
+    if (DEBUG)
+        fprintf(stderr, "interpreteur\n");
     if (cmd == NULL || cmd->seq[0] == NULL)
     {
         // printf(RED "Commande vide\n" RESET);
@@ -167,14 +177,16 @@ int interpreteur(struct cmdline *cmd)
     }
     else if (cmd->err)
     {
-        fprintf(stderr,RED "Erreur de syntaxe\n" RESET);
+        fprintf(stderr, RED "Erreur de syntaxe\n" RESET);
         return 1;
     }
-    if (DEBUG) fprintf(stderr,"cmd->seq[0][0] = %s\n", (char *)cmd->seq[0][0]);
+    if (DEBUG)
+        fprintf(stderr, "cmd->seq[0][0] = %s\n", (char *)cmd->seq[0][0]);
 
     if (estInterne(cmd->seq[0][0]))
     {
-        if (DEBUG) fprintf(stderr,"estInterne\n");
+        if (DEBUG)
+            fprintf(stderr, "estInterne\n");
         execInterne(cmd);
     }
     if (cmd->seq[1] == NULL)
