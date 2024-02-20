@@ -191,6 +191,7 @@ struct cmdline *readcmd(void)
 	s->seq = 0;
 
 	i = 0;
+	s->esp = 0;
 	while ((w = words[i++]) != 0) {
 		switch (w[0]) {
 		case '<':
@@ -265,7 +266,7 @@ error:
 		case '<':
 		case '>':
 		case '|':
-			break;
+		break;
 		default:
 			free(w);
 		}

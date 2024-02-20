@@ -1,30 +1,25 @@
 #include "execute.h"
 
-int nbFils = 0; // nombre de fils en cours d'exécution (pour le handler)
-int nbFilsEsp = 0; // nombre de fils en cours d'exécution en BG(pour le handler)
+
+pidlist *pidFg; // Liste des pid en premier plan
+pidlist *pidBg; // Liste des pid en arrière plan
 
 void handler_sigchld(int sig)
 {
-    while ((waitpid(-1, NULL, WNOHANG)) > 0)
-    {
-        nbFils--;
-    }
-    return;
-}
-
-void handler_sigchldbg(int sig)
-{
     pid_t pid;
-    while ((pid = waitpid(-1, NULL, WNOHANG| WUNTRACED)) > 0)
+    while ((pid=waitpid(-1, NULL, WNOHANG)) > 0)
     {
-        nbFilsEsp--;
-    };
-    if (nbFilsEsp == 0)
-    {
-        signal(SIGCHLD, SIG_DFL);
+        if (estPresent(pidFg, pid))
+        {
+
+            supprimerPid(&pidFg, pid);
+        }
+        else
+        {
+            supprimerPid(&pidBg, pid);
+        }
     }
     return;
-
 }
 
 int execInterne(struct cmdline *cmd)
@@ -47,7 +42,7 @@ int execAvecPipe(struct cmdline *cmd)
     {
         fprintf(stderr, "execAvecPipe\n");
     }
-    Signal(SIGCHLD, handler_sigchld);
+
     int nb_cmd = 0;
     while (cmd->seq[nb_cmd + 1] != NULL) // compte le nombre de pipes
     {
@@ -63,7 +58,7 @@ int execAvecPipe(struct cmdline *cmd)
             exit(1);
         }
     }
-
+    pid_t pid;
     for (int i = 0; i <= nb_cmd; i++)
     {
         if (DEBUG)
@@ -71,7 +66,7 @@ int execAvecPipe(struct cmdline *cmd)
             fprintf(stderr, "execvp(%s)\n", cmd->seq[i][0]);
             fprintf(stderr, "i = %d\n", i);
         }
-        if (Fork() == 0) // Fils
+        if ((pid = Fork()) == 0) // Fils
         {
             // On redirige les entrées/sorties
             if (i == 0) // Cas de la première commande
@@ -114,8 +109,8 @@ int execAvecPipe(struct cmdline *cmd)
                 dup2(pipes[i - 1][0], STDIN_FILENO); // redirige stdin vers le pipe précédent
                 dup2(pipes[i][1], STDOUT_FILENO);    // redirige stdout vers le pipe
             }
-            for (int k = 0; k < nb_cmd; k++)
-            {
+            for (int k = 0; k < nb_cmd; k++)         // On ferme les pipes déja fermé par dup2
+            {                                        // celà ne pose pas de problèmes.
                 close(pipes[k][0]);
                 close(pipes[k][1]);
             }
@@ -126,7 +121,15 @@ int execAvecPipe(struct cmdline *cmd)
         }
         else // Père
         {
-            nbFils++;
+            if (cmd->esp == NULL)
+            {
+                ajouterPid(&pidFg, pid);
+            }
+            else
+            {
+
+                ajouterPid(&pidBg, pid);
+            }
         }
     }
     for (int i = 0; i < nb_cmd; i++) // fermeture des pipes pour le Père
@@ -135,9 +138,13 @@ int execAvecPipe(struct cmdline *cmd)
         close(pipes[i][1]);
     }
 
-    while (nbFils > 0)
-        ; // attente de la fin des fils
-    signal(SIGCHLD, SIG_DFL);
+    if (cmd->esp == NULL)
+    {
+        while (!estVide(pidFg))
+        sleep(1); // attente de la fin des fils}
+        // Sinon on n'attends pas
+        
+    }
     return 0;
 }
 
@@ -167,15 +174,25 @@ int execSansPipe(struct cmdline *cmd)
     }
     else
     { // père
-        waitpid(pid, NULL, 0);
+        if (cmd->esp == NULL)
+        {
+            ajouterPid(&pidFg, pid);
+            while (!estVide(pidFg))
+                ; // attente de la fin des fils
+        }
+        else{
+            ajouterPid(&pidBg, pid);
+        }
+        // Sinon on n'attends pas
         return 0;
     }
 }
 
-
 int interpreteur(struct cmdline *cmd)
 {
-        if (DEBUG)
+    Signal(SIGCHLD, handler_sigchld);
+    //Singal(SIGINT, SIG_IGN);
+    if (DEBUG)
         fprintf(stderr, "interpreteur\n");
     if (cmd == NULL || cmd->seq[0] == NULL)
     {
@@ -186,24 +203,6 @@ int interpreteur(struct cmdline *cmd)
     {
         fprintf(stderr, RED "Erreur de syntaxe\n" RESET);
         return 1;
-    }
-    if (cmd->esp)
-    {
-        cmd->esp = NULL;
-        pid_t pid;
-        Signal(SIGCHLD, handler_sigchldbg);
-
-        if ((pid = Fork()) == 0)
-        {
-            interpreteur(cmd);
-            exit(0);
-        }
-        else
-        {
-            nbFilsEsp++;
-            return 0;
-        }
-        return 0;
     }
     if (DEBUG)
         fprintf(stderr, "cmd->seq[0][0] = %s\n", (char *)cmd->seq[0][0]);
