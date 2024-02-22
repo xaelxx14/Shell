@@ -10,9 +10,10 @@ typedef struct job {
     struct job *next;
 } job;
 
-void ajouterJob(job **jl, int pid);
-int getnum(job jl);
-void supprimerJob(job **jl, int jobNum);
-
-
+void ajouterJob(job **jl, pid_t pid,char *status, char *cmd);
+pid_t getpidJob(job *jl,int jobNum);
+void supprimerJob(job **jl, pid_t pid);
+int estPresentJobs(job *jl, int jobNum);
+int getNum(job jl);
+void changeStatus(job *jl, int jobNum);
 #endif // _JOBS_H

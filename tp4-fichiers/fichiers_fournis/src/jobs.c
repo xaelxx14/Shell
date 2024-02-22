@@ -43,6 +43,39 @@ void supprimerJob(job **jl, pid_t pid)
     free(tmp);
 }
 
+pid_t getpidJob(job *jl,int jobNum){
+     job *tmp=jl;
+    while (tmp!=NULL){
+       if (tmp->jobNum == jobNum)
+        {
+            return tmp->pid;
+        }
+        tmp = tmp->next;
+    }
+    return -1;
+}
 int getNum(job jl){
     return jl.jobNum;
+}
+
+int estPresentJobs(job *jl, int jobNum){
+    job *tmp=jl;
+    while (tmp!=NULL){
+       if (tmp->jobNum == jobNum)
+        {
+            return 1;
+        }
+        tmp = tmp->next;
+    }
+    return 0;
+}
+
+void changeStatus(job *jl, int jobNum){
+    job* tmp = jl;
+    while (tmp != NULL) {
+        if ((!(strcmp(tmp->status,"running on background")))&&(jobNum==tmp->jobNum)) {
+            tmp->status="running on foreground";
+        }
+        tmp = tmp->next;
+    }
 }

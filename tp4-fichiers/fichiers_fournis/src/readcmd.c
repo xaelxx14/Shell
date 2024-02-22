@@ -240,6 +240,14 @@ struct cmdline *readcmd(void)
 			}
 			s->esp = w;
 			break;
+		case '%':
+			/*if (words[i] == 0) {
+				s->err = "misplaced symbol";
+				goto error;
+			}*/
+			s->perc = w;
+			break;
+
 		default:
 			cmd = xrealloc(cmd, (cmd_len + 2) * sizeof(char *));
 			cmd[cmd_len++] = w;

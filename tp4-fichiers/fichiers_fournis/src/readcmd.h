@@ -17,7 +17,8 @@ struct cmdline {
 	char *in;	/* If not null : name of file for input redirection. */
 	char *out;	/* If not null : name of file for output redirection. */
 	char ***seq;	/* See comment below */
-	char * esp ; /* If not null : the command is launched in background*/
+	char *esp ; /* If not null : the command is launched in background*/
+	char *perc; /*If not null: brings the background job to the foreground*/
 };
 
 /* Field seq of struct cmdline :

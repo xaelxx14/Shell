@@ -3,16 +3,20 @@
 
 pidlist *pidFg; // Liste des pid en premier plan
 pidlist *pidBg; // Liste des pid en arrière plan
+job *jobs;      // Liste des jobs
 
 void handler_sigchld(int sig)
 {
     pid_t pid;
     while ((pid=waitpid(-1, NULL, WNOHANG)) > 0)
     {
+        if(estPresentJobs(jobs,pid))
+        {
+            supprimerJob(&jobs, pid); 
+        }
         if (estPresent(pidFg, pid))
         {
-
-            supprimerPid(&pidFg, pid);
+            supprimerPid(&pidFg, pid); 
         }
         else
         {
@@ -123,11 +127,12 @@ int execAvecPipe(struct cmdline *cmd)
         {
             if (cmd->esp == NULL)
             {
+                ajouterJob(&jobs, pid, "running on background", cmd->seq[0][0]);
                 ajouterPid(&pidFg, pid);
             }
             else
             {
-
+                ajouterJob(&jobs, pid, "running on foreground", cmd->seq[0][0]);
                 ajouterPid(&pidBg, pid);
             }
         }
@@ -176,12 +181,26 @@ int execSansPipe(struct cmdline *cmd)
     { // père
         if (cmd->esp == NULL)
         {
+            ajouterJob(&jobs, pid, "running on background", cmd->seq[0][0]);
             ajouterPid(&pidFg, pid);
             while (!estVide(pidFg))
                 ; // attente de la fin des fils
         }
         else{
+            ajouterJob(&jobs, pid, "running on foreground", cmd->seq[0][0]);
             ajouterPid(&pidBg, pid);
+        }
+        if(cmd->perc){
+            printf("bubbubub\n");
+            char *cmd2=cmd->perc;
+            char numJob=cmd2[1];
+            int num=numJob - '0';
+           
+            pid_t pidJob=getpidJob(jobs,num);
+
+            supprimerPid(&pidBg, pidJob);
+            ajouterPid(&pidFg, pidJob);
+            changeStatus(jobs,(int)num);
         }
         // Sinon on n'attends pas
         return 0;
@@ -204,6 +223,7 @@ int interpreteur(struct cmdline *cmd)
         fprintf(stderr, RED "Erreur de syntaxe\n" RESET);
         return 1;
     }
+    
     if (DEBUG)
         fprintf(stderr, "cmd->seq[0][0] = %s\n", (char *)cmd->seq[0][0]);
 
