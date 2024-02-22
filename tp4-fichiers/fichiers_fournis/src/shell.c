@@ -6,16 +6,18 @@
 #include <stdlib.h>
 #include "readcmd.h"
 #include "csapp.h"
-
+#include "utils.h"
 #include "execute.h"
+#include "global.h"
 
 int main( int argc, char* argv[])
 {
 	if(isatty(0)) {
 		printf(BOLD "Bienvenue sur notre mini-shell\n" RESET);
 	}
-	signal(SIGCHLD, handler_sigchld);
-	while (1) {
+	setup_handlers();
+	while (1)
+	{
 		struct cmdline *l;
 		printf(BLUE "shell> " RESET);
 		l = readcmd();
