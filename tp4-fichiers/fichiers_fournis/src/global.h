@@ -14,6 +14,6 @@
 
 extern pidlist *pidFg; // Liste des pid en premier plan
 extern pidlist *pidBg; // Liste des pid en arrière plan
-extern job *jobs;      // Liste des jobs
+extern job * jobs[];      // Liste des jobs
 
 #endif // GLOBAL_H

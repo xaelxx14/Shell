@@ -1,158 +1,100 @@
 #include <stdio.h>
 #include "jobs.h"
 
-job *jobs = NULL; // Liste des jobs
 
-// void ajouterJob(job **jl, pid_t pid,char *status, char *cmd)
-// {
-//     job *new = malloc(sizeof(job));
-//     new->pid = pid;
-//     new->cmd = cmd;
-//     new->status = status;
-//     if (*jl == NULL)
-//     {
-//         new->jobNum = 1;
-//     }
-//     else
-//     {
-//     new->jobNum = getNum(**jl) + 1;
-//     }
-//     new->next = *jl;
-//     *jl = new;
-// }
+int numJob=0;
+job* jobs[MAX_JOBS];
 
-int ajouterJob(job **jl, pid_t pid,char *status, char ***cmd)
+job * setup(){
+    job* j = malloc(sizeof(job));
+    j->pid=0;
+    j->status=NULL;
+    j->cmd = NULL;
+    return j;
+}
+
+void ajouterJob(pid_t pid, char *status,char ***cmd )
 {
-    job *new = malloc(sizeof(job));
-    new->pid = pid;
-    new->cmd = malloc(sizeof(char)*100); // Ne voit pas comment faire autrement
-    int i = 0;
-    int j = 0;
-    while (cmd[i] != NULL)
-    {
-        j = 0;
-        if (i != 0)
-        {
-            strcat(new->cmd, "| ");
-        }
-        while(cmd[i][j] != NULL)
-        {
-            strcat(new->cmd, cmd[i][j]);
-            strcat(new->cmd, " ");
-            j++;
-        }
-        i++;
-        }
-    new->status = status;
-    new->next = NULL;
-    if (*jl == NULL)
-    {
-        new->jobNum = 1;
-        *jl = new;
+    
+    if(numJob<MAX_JOBS){
+        jobs[numJob] = setup();
+        jobs[numJob]->pid = pid;
+        jobs[numJob]->status = status;
+        jobs[numJob]->cmd = (char* )cmd[0];
+        numJob++;
+        //int i=0;
+        //strcpy(jobs[numJob]->cmd,cmd[i][0]);
+        // while (cmd[i][0] != NULL)
+        // {
+        //     int j = 0;
+        //     while (cmd[i][j] != NULL)
+        //     {
+        //         strcat(jobs[numJob]->cmd, cmd[i][j]);
+        //         strcat(jobs[numJob]->cmd, " ");
+        //         j++;
+        //     }
+        //     i++;
+        // }
+        //printf("cmd = %s\n",jobs[numJob]->cmd);
     }
     else{
-    job *tmp = *jl;
-    while (tmp->next != NULL)
-    {
-        tmp = tmp->next;
-    }
-    new->jobNum = getNum(*tmp) + 1;
-    tmp->next = new;
-    }
-    return new->jobNum;
-}
-
-void supprimerJob(job **jl, pid_t pid)
-{
-    job *tmp = *jl;
-    job *prev = NULL;
-    while (tmp != NULL && tmp->pid != pid)
-    {
-        prev = tmp;
-        tmp = tmp->next;
-    }
-    if (tmp == NULL)
-    {
         return;
     }
-    if (prev == NULL)
-    {
-        *jl = tmp->next;
-    }
-    else
-    {
-        prev->next = tmp->next;
-    }
-    free(tmp->cmd);
-    free(tmp);
 }
 
-pid_t getpidJob(job *jl,int jobNum){
-     job *tmp=jl;
-    while (tmp!=NULL){
-       if (tmp->jobNum == jobNum)
-        {
-            return tmp->pid;
+void supprimerJob(pid_t pid){
+    for(int i=0;i<numJob;i++){
+        if(jobs[i]->pid==pid){
+            free(jobs[i]);
+            for(int j=i;j<numJob;j++){
+                jobs[i]=jobs[j+1];
+            }
         }
-        tmp = tmp->next;
     }
+    numJob--;
+}
+
+int estPresentJobs(int jobNum)
+{
+    return (jobNum <= numJob);
+}
+
+void changeStatus(int jobNum, char *newStatus){
+    jobs[jobNum-1]->status=newStatus;
+}
+
+pid_t getpidJob(int jobNum){
+    if(jobNum-1<=numJob)
+        return jobs[jobNum-1]->pid;
     return -1;
 }
-int getNum(job jl){
-    return jl.jobNum;
+
+void afficherJobs(){
+    for (int i=0;i<numJob;i++){
+        printf("[%d] %*s %s\n", i+1,10,jobs[i]->status,jobs[i]->cmd);
+    }
 }
 
-int estPresentJobs(job *jl, pid_t pid){
-    job *tmp=jl;
-    while (tmp!=NULL){
-       if (tmp->pid == pid)
-        {
-            return 1;
+char *getStatus (int jobNum){
+    if(estPresentJobs(jobNum))
+        return jobs[jobNum]->status;
+    return "Le job n'est pas present";
+}
+
+void afficherJobsFini(){
+    for (int i=0;i<numJob;i++){
+        if(!(strcmp("Finished",jobs[i]->status))){
+            printf("[%d] %*s %s\n", i+1,10,jobs[i]->status,jobs[i]->cmd);
+            supprimerJob(jobs[i]->pid);
         }
-        tmp = tmp->next;
     }
-    return 0;
 }
 
-void changeStatus(job **jl, int jobNum,char * newStatus){    
-    job* tmp = *jl;
-    while (tmp != NULL) {
-        if (jobNum==tmp->jobNum) {
-            tmp->status=newStatus;
+int getNumJob(pid_t pid){
+    for(int i=0;i<numJob;i++){
+        if(jobs[i]->pid==pid){
+            return i;
         }
-        tmp = tmp->next;
     }
-}
-
-void afficherJobs(job *jl){
-    job *tmp=jl;
-    while (tmp!=NULL){
-        printf("[%d] %*s %s\n", tmp->jobNum,10,tmp->status,tmp->cmd);
-        tmp = tmp->next;
-    }
-}
-
-char * getStatus(job *jl, int jobNum){
-    job *tmp=jl;
-    while (tmp!=NULL){
-       if (tmp->jobNum == jobNum)
-        {
-            return tmp->status;
-        }
-        tmp = tmp->next;
-    }
-    return NULL;
-}
-
-
-void afficherJobsFini(job *jl){
-    job *tmp=jl;
-    while(tmp!=NULL){
-        if(!(strcmp("Finished",tmp->status))){
-            printf("[%d] %*s %s\n", tmp->jobNum,10,tmp->status,tmp->cmd);
-            supprimerJob(&jl,tmp->pid);
-        }
-        tmp = tmp->next;
-    }
-    return;
+    return -1;
 }

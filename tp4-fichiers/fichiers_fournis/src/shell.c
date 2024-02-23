@@ -15,6 +15,7 @@ int main( int argc, char* argv[])
 	if(isatty(0)) {
 		printf(BOLD "Bienvenue sur notre mini-shell\n" RESET);
 	}
+	
 	setup_handlers();
 	while (1)
 	{

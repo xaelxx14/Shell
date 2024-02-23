@@ -13,13 +13,12 @@ void handler_sigchld(int sig)
         if (estPresent(pidFg, pid))
         {
             supprimerPid(&pidFg, pid);
-            supprimerJob(&jobs, pid);
+            supprimerJob(pid);
         }
         else
         {
             supprimerPid(&pidBg, pid);
-            printf("Job %d finished\n", pid);
-            changeStatus(&jobs, pid, "Finished");
+            changeStatus(getNumJob(pid), "Finished");
         }
     }
     return;
@@ -41,7 +40,7 @@ void handler_sigstop(int sig)
         kill(-(pidFg->pid), SIGSTOP);
         ajouterPid(&pidBg, pidFg->pid);
         supprimerPid(&pidFg, pidFg->pid);
-        changeStatus(&jobs, pidFg->pid, "Stopped on background");
+        changeStatus(pidFg->pid, "Stopped on background");
     }
     return;
 }

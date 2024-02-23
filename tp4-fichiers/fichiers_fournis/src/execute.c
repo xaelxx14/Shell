@@ -3,6 +3,7 @@
 pidlist *pidFg = NULL; // Liste des pid en premier plan
 pidlist *pidBg = NULL; // Liste des pid en arrière plan
 
+
 int execInterne(struct cmdline *cmd)
 {
     if (strcmp("cd", (char *)cmd->seq[0][0]) == 0)
@@ -16,7 +17,7 @@ int execInterne(struct cmdline *cmd)
     }
     else if (strcmp("jobs", (char *)cmd->seq[0][0]) == 0)
     {
-        afficherJobs(jobs);
+        afficherJobs(*jobs);
         return 0;
     }
     else if (strcmp("fg", (char *)cmd->seq[0][0]) == 0)
@@ -29,7 +30,10 @@ int execInterne(struct cmdline *cmd)
         char *cmd2 = cmd->seq[0][1];
         char numJob = cmd2[1];
         int num = numJob - '0';
-        pid_t pid = getpidJob(jobs, num);
+        printf("num = %d\n", num);
+        pid_t pid = getpidJob(num);
+        printf("[%d] %d\n", num, pid);
+
         if (pid == -1)
         {
             fprintf(stderr, RED "Erreur:" RESET " job introuvable\n");
@@ -38,7 +42,7 @@ int execInterne(struct cmdline *cmd)
         kill(pid, SIGCONT);
         ajouterPid(&pidFg, pid);
         supprimerPid(&pidBg, pid);
-        changeStatus(&jobs, num,"Running on foreground");
+        changeStatus(num,"Running on foreground");
         while (!estVide(pidFg))
             sleep(1); // attente de la fin des fils
         return 0;
@@ -53,7 +57,7 @@ int execInterne(struct cmdline *cmd)
         char *cmd2 = cmd->seq[0][1];
         char numJob = cmd2[1];
         int num = numJob - '0';
-        pid_t pid = getpidJob(jobs, num);
+        pid_t pid = getpidJob( num);
         if (pid == -1)
         {
             fprintf(stderr, RED "Erreur:" RESET " job introuvable\n");
@@ -62,7 +66,7 @@ int execInterne(struct cmdline *cmd)
         Kill(pid, SIGCONT);
         ajouterPid(&pidBg, pid);
         supprimerPid(&pidFg, pid);
-        changeStatus(&jobs, num,"Running on background");
+        changeStatus( num,"Running on background");
         return 0;
     }
     else if (strcmp("kill", (char *)cmd->seq[0][0]) == 0)
@@ -170,14 +174,14 @@ int execAvecPipe(struct cmdline *cmd)
         {
             if (cmd->esp == NULL)
             {
-                ajouterJob(&jobs, pid, "Running on foreground", cmd->seq);
+                ajouterJob( pid, "Running on foreground", cmd->seq);
                 ajouterPid(&pidFg, pid);
             }
             else
             {
-                int nb = ajouterJob(&jobs, pid, "Running on background", cmd->seq);
+                ajouterJob( pid, "Running on background", cmd->seq);
                 ajouterPid(&pidBg, pid);
-                printf("[%d] %d\n", nb, pid);
+                printf("[%d] %d\n", getNumJob(pid)+1, pid);
             }
         }
     }
@@ -225,18 +229,17 @@ int execSansPipe(struct cmdline *cmd)
     { // père
         if (cmd->esp == NULL)
         {
-            printf("pid = %d\n", pid);
-            ajouterJob(&jobs, pid, "Running on foreground", cmd->seq);
+            ajouterJob(pid, "Running on foreground", cmd->seq);
             ajouterPid(&pidFg, pid);
-            printf("pidFg = %d\n", pidFg->pid);
             while (!estVide(pidFg))
                 Sleep(1);
             ; // attente de la fin des fils
         }
         else
         {
-            ajouterJob(&jobs, pid, "Running on background", cmd->seq);
             ajouterPid(&pidBg, pid);
+            ajouterJob(pid, "Running on background", cmd->seq);
+            printf("[%d] %d\n", getNumJob(pid)+1, pid);
         }
         // Sinon on n'attends pas
         return 0;
@@ -245,8 +248,7 @@ int execSansPipe(struct cmdline *cmd)
 
 int interpreteur(struct cmdline *cmd)
 {
-    
-    afficherJobsFini(jobs);
+    afficherJobsFini(*jobs);
     // Singal(SIGINT, SIG_IGN);
     if (DEBUG)
         fprintf(stderr, "interpreteur\n");
