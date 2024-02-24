@@ -1,0 +1,7 @@
+#
+# test14.txt - Test de Ctrl + Z et Ctrl + C
+#
+sleep 3
+TSTP
+fg %1
+INT

@@ -1,4 +1,5 @@
 #
-# test09.txt - Test de background (&)
+# test09.txt - Test de redirection
 #
-sleep 10 &
+date > date.txt
+cat date.txt

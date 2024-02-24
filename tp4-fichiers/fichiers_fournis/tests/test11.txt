@@ -1,6 +1,6 @@
 #
-# test11.txt - Test de foreground (%)
+# test11.txt - Test de jobs
 #
-sleep 10 &
+sleep 3 &
+sleep 5 &
 jobs
-fg %1

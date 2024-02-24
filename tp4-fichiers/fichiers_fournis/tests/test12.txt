@@ -1,5 +1,6 @@
 #
-# test12.txt - Test de Ctrl+C
+# test12.txt - Test de foreground (%)
 #
-sleep 20
-^C
+sleep 3 &
+jobs
+fg %1
