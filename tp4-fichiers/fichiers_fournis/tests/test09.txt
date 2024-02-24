@@ -1,0 +1,4 @@
+#
+# test09.txt - Test de background (&)
+#
+sleep 10 &

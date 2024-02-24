@@ -1,0 +1,5 @@
+#
+# test12.txt - Test de Ctrl+C
+#
+sleep 20
+^C

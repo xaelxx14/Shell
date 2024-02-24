@@ -1,0 +1,4 @@
+#
+# test06.txt - Test des pipes
+#
+env | grep PATH

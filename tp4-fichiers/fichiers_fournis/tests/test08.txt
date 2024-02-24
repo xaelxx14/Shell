@@ -1,0 +1,4 @@
+#
+# test08.txt - Test de redirection
+#
+wc -c < toto.txt

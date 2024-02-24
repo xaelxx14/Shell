@@ -1,0 +1,4 @@
+#
+# test07.txt - Test de redirection
+#
+ls | wc > toto.txt
