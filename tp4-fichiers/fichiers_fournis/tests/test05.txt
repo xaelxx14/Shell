@@ -1,0 +1,5 @@
+#
+# test05.txt - Test des pipes
+#
+sleep 5 | ls | wc
+WAIT

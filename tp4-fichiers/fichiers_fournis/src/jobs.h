@@ -2,7 +2,7 @@
 #define _JOBS_H
 #include "csapp.h"
 
-#define MAX_JOBS 10
+#define MAX_JOBS 32
 /**
  * @brief Structure de données pour les jobs
  * @param pid PID du processus
@@ -94,4 +94,10 @@ void afficherJobsFini();
  */
 
 int getNumJob(pid_t pid);
+
+/**
+ * @brief Permet de free tous les jobs
+ * 
+ */
+void freeJobs();
 #endif // _JOBS_H

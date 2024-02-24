@@ -9,7 +9,7 @@ void handler_sigchld(int sig)
     pid_t pid;
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
     {
-
+        
         if (estPresent(pidFg, pid))
         {
             supprimerPid(&pidFg, pid);
@@ -18,7 +18,7 @@ void handler_sigchld(int sig)
         else
         {
             supprimerPid(&pidBg, pid);
-            changeStatus(getNumJob(pid), "Finished");
+            changeStatus(getNumJob(pid)+1, "Finished");
         }
     }
     return;
@@ -40,7 +40,7 @@ void handler_sigstop(int sig)
         kill(-(pidFg->pid), SIGSTOP);
         ajouterPid(&pidBg, pidFg->pid);
         supprimerPid(&pidFg, pidFg->pid);
-        changeStatus(pidFg->pid, "Stopped on background");
+        changeStatus(getNumJob(pidBg->pid)+1, "Stopped on background");
     }
     return;
 }

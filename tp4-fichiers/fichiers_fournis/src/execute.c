@@ -3,7 +3,6 @@
 pidlist *pidFg = NULL; // Liste des pid en premier plan
 pidlist *pidBg = NULL; // Liste des pid en arrière plan
 
-
 int execInterne(struct cmdline *cmd)
 {
     if (strcmp("cd", (char *)cmd->seq[0][0]) == 0)
@@ -13,6 +12,12 @@ int execInterne(struct cmdline *cmd)
     }
     else if (strcmp("exit", (char *)cmd->seq[0][0]) == 0 || strcmp("quit", (char *)cmd->seq[0][0]) == 0)
     {
+        while (!estVide(pidBg))
+        {
+            kill(pidBg->pid, SIGKILL);
+            supprimerPid(&pidBg, pidBg->pid);
+        }
+        freeJobs();
         exit(0);
     }
     else if (strcmp("jobs", (char *)cmd->seq[0][0]) == 0)
@@ -42,7 +47,7 @@ int execInterne(struct cmdline *cmd)
         kill(pid, SIGCONT);
         ajouterPid(&pidFg, pid);
         supprimerPid(&pidBg, pid);
-        changeStatus(num,"Running on foreground");
+        changeStatus(num, "Running on foreground");
         while (!estVide(pidFg))
             sleep(1); // attente de la fin des fils
         return 0;
@@ -57,7 +62,7 @@ int execInterne(struct cmdline *cmd)
         char *cmd2 = cmd->seq[0][1];
         char numJob = cmd2[1];
         int num = numJob - '0';
-        pid_t pid = getpidJob( num);
+        pid_t pid = getpidJob(num);
         if (pid == -1)
         {
             fprintf(stderr, RED "Erreur:" RESET " job introuvable\n");
@@ -66,7 +71,7 @@ int execInterne(struct cmdline *cmd)
         Kill(pid, SIGCONT);
         ajouterPid(&pidBg, pid);
         supprimerPid(&pidFg, pid);
-        changeStatus( num,"Running on background");
+        changeStatus(num, "Running on background");
         return 0;
     }
     else if (strcmp("kill", (char *)cmd->seq[0][0]) == 0)
@@ -112,7 +117,8 @@ int execAvecPipe(struct cmdline *cmd)
             fprintf(stderr, "execvp(%s)\n", cmd->seq[i][0]);
             fprintf(stderr, "i = %d\n", i);
         }
-        if(i==1){
+        if (i == 1)
+        {
             grpId = pid;
         }
         if ((pid = Fork()) == 0) // Fils
@@ -120,7 +126,7 @@ int execAvecPipe(struct cmdline *cmd)
             // On redirige les entrées/sorties
             if (i == 0) // Cas de la première commande
             {
-                Setpgid(0,0);
+                Setpgid(0, 0);
                 if (cmd->in)
                 {
                     int new_in = open(cmd->in, O_RDONLY);
@@ -136,7 +142,7 @@ int execAvecPipe(struct cmdline *cmd)
             }
             else if (i == nb_cmd) // Cas de la dernière commande
             {
-                Setpgid(0,grpId);
+                Setpgid(0, grpId);
                 if (cmd->out)
                 {
                     int new_out = open(cmd->out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -174,14 +180,14 @@ int execAvecPipe(struct cmdline *cmd)
         {
             if (cmd->esp == NULL)
             {
-                ajouterJob( pid, "Running on foreground", cmd->seq);
+                ajouterJob(pid, "Running on foreground", cmd->seq);
                 ajouterPid(&pidFg, pid);
             }
             else
             {
-                ajouterJob( pid, "Running on background", cmd->seq);
+                ajouterJob(pid, "Running on background", cmd->seq);
+                printf("[%d] %d\n", getNumJob(pid) + 1, pid);
                 ajouterPid(&pidBg, pid);
-                printf("[%d] %d\n", getNumJob(pid)+1, pid);
             }
         }
     }
@@ -239,7 +245,7 @@ int execSansPipe(struct cmdline *cmd)
         {
             ajouterPid(&pidBg, pid);
             ajouterJob(pid, "Running on background", cmd->seq);
-            printf("[%d] %d\n", getNumJob(pid)+1, pid);
+            printf("[%d] %d\n", getNumJob(pid) + 1, pid);
         }
         // Sinon on n'attends pas
         return 0;
